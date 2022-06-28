@@ -6,7 +6,7 @@ import csv
 from django import forms
 from . import util
 from django.urls import reverse
-
+from markdown2 import Markdown
 
 class SearchForm(forms.Form):
     """ Form Class for Search Bar """
@@ -32,8 +32,20 @@ class EditForm(forms.Form):
 
 #Search for result
 def result(request, name):
+    entry = util.get_entry(name)
+        
     return render(request,"encyclopedia/result.html", {
-        "entry": util.get_entry(name),
+        "entry": Markdown().convert(entry),
+        "name":name
+    })
+
+#Search
+def search_result(request):
+    if request.method == "POST":
+        name = request.POST['q']
+        entry= util.get_entry(name)
+    return render(request, "encyclopedia/result.html",{
+        "entry": Markdown().convert(entry),
         "name":name
     })
 
@@ -66,13 +78,7 @@ def edit(request, name):
 
   
 
-#Search
-def search_result(request):
-    if request.method == "POST":
-        name = request.POST['q']
-    return render(request, "encyclopedia/result.html",{
-        "entry": util.get_entry(name)
-    })
+
 
 #Home page
 def index(request):
