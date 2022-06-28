@@ -1,0 +1,20 @@
+{% extends "encyclopedia/layout.html" %}
+
+{% block title %}
+    {{ name }}
+{% endblock %}
+
+{% block body %}
+{% for msg in messages%}
+    {{ msg }}
+{% endfor %}
+    {% if entry == None %}
+
+        <h1 style= 'color: red; text-align: center'> Page not found </h1>
+
+    {% else %}
+        <h1> {{ entry|safe }} </h1>
+
+        <a href="{% url 'edit' name=name %}">Edit Page</a>
+    {% endif %}        
+{% endblock %}
