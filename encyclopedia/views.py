@@ -1,18 +1,18 @@
-from random import randint
+from lib2to3.pytree import convert
+from random import choice, randint
+from turtle import title
+from unicodedata import name
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
 from django.contrib import messages
-import csv
 from django import forms
 from . import util
 from django.urls import reverse
 from markdown2 import Markdown
+import markdown
+import random
+from markdownify import markdownify
 
-class SearchForm(forms.Form):
-    """ Form Class for Search Bar """
-    name = forms.CharField(label='', widget=forms.TextInput(attrs={
-      "class": "search",
-      "placeholder": "Search wiki"}))
+from . import util
 
 #new page
 class NewPageForm(forms.Form):
@@ -23,29 +23,54 @@ class NewPageForm(forms.Form):
     widget= forms.Textarea
     (attrs={'placeholder':'Enter markdown content', 'class': 'form-control'}))
 
+
+class SearchForm(forms.Form):
+    """ Form Class for Search Bar """
+    title = forms.CharField(label='', widget=forms.TextInput(attrs={
+      "class": "search",
+      "placeholder": "Search Encyclopedia"}))
+
+def md_converter(title):
+    content = util.get_entry(title)
+    markdowner = markdown.Markdown()
+    if content == None:
+        return None
+    else: 
+        return markdowner.convert(content)
+
+
 #Edit Page
 class EditForm(forms.Form):
   """ Form Class for Editing Entries """
   text = forms.CharField(label='', widget=forms.Textarea(attrs={
-      "placeholder": "Enter Page Content using Github Markdown", 'class': 'form-control'
+      "placeholder": "Enter Page Content", 'class': 'form-control'
     }))
 
 #Search for result
 def result(request, name):
-    entry = util.get_entry(name)
-        
+    entry_HTML = md_converter(name)
     return render(request,"encyclopedia/result.html", {
-        "entry": Markdown().convert(entry),
-        "name":name
+        "name":name,
+        "entry": entry_HTML,
+        
     })
+# Random page
+
+def random_entry(request):
+    titles = util.list_entries()
+    title = random.choice(titles)
+
+    # Redirect to selected page:
+    return redirect(reverse('result', args=[title]))
+
 
 #Search
 def search_result(request):
     if request.method == "POST":
         name = request.POST['q']
-        entry= util.get_entry(name)
+        entry_HTML = md_converter(name)
     return render(request, "encyclopedia/result.html",{
-        "entry": Markdown().convert(entry),
+        "entry": entry_HTML,
         "name":name
     })
 
@@ -71,12 +96,11 @@ def edit(request, name):
         if form.is_valid():
           text = form.cleaned_data['text']
           util.save_entry(name, text)
+          entry_HTML = md_converter(name)
           return render(request,"encyclopedia/result.html", {
-            "entry": util.get_entry(name),
+            "entry": entry_HTML,
             "name":name
         })
-
-  
 
 
 
@@ -94,11 +118,10 @@ def create_new_entry(request):
     if create_form.is_valid():
         title = create_form.cleaned_data["pagename"]
         body = create_form.cleaned_data["body"]
+        titlefound = util.get_entry(title)
 
-        if title in util.list_entries():
-            messages.success(request, f"{title} exist and been replaced")
-            util.save_entry(title,body)
-            return result(request, title)
+        if titlefound is not None:
+            return render( request, "encyclopedia/error.html")
         else:        
             util.save_entry(title,body)
             return result(request, title)
@@ -110,9 +133,4 @@ def create_new_entry(request):
 
     })
 
-# Random page
 
-def random_entry(request):
-    entries = util.list_entries()
-    entry = entries[randint(0, len(entries) - 1)]
-    return result(request, entry)
